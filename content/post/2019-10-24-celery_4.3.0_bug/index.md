@@ -1,4 +1,3 @@
-
 ---
 title: "Celery 4.3 BUG 排查"
 date: 2019-10-24T22:20:24+08:00
@@ -22,10 +21,10 @@ Error: No nodes replied within time constraint
 
 ## 环境
 
-python==3.7.3
-celery==4.3.0
-kombu==4.6.4
-redis==3.2.0
+python==3.7.3  
+celery==4.3.0  
+kombu==4.6.4  
+redis==3.2.0  
 
 
 ## debug过程
@@ -38,7 +37,7 @@ redis==3.2.0
 
 搭建了debug环境，观察实例变量，如图：
 
-![image](https://upload-images.jianshu.io/upload_images/5298275-34fade2e3ff22b0f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![1](1.jpeg)
 
 经调试，发现app.pidbox实例为None
 
@@ -53,7 +52,8 @@ redis==3.2.0
 
 因此决定从原理和源码入手，重新理解了下路由过程（connection绑定exchange和queue，通过不同的路由方式走connection）和control模块(内建connection，exchange)找到了真正的issue及原因为**当前版本kombu对redis数据操作的抽象问题**
 详细原因及解决方案，可参见：
-issue: [https://github.com/celery/kombu/issues/1087](https://github.com/celery/kombu/issues/1087)
+
+issue: [https://github.com/celery/kombu/issues/1087](https://github.com/celery/kombu/issues/1087)  
 pr: [https://github.com/celery/kombu/pull/1089](https://github.com/celery/kombu/pull/1089)
 9月1号交的pr，被别人抢先一个多月,哈哈~~~
 
