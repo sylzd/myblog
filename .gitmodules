@@ -1,0 +1,8 @@
+[submodule "sylzd.github.io"]
+	path = sylzd.github.io
+	url = git@github.com:sylzd/sylzd.github.io.git
+	branch = master
+[submodule "public"]
+	path = public
+	url = git@github.com:sylzd/sylzd.github.io.git
+	branch = master
