@@ -1,23 +1,43 @@
- ---
- title: ""分布式与数据库的爱恨纠葛 之 Raft算法
- date: 2020-08-20T22:20:24+08:00
- description: ""
- draft: false
- tags: ["分布式", "raft", "一致性", "共识算法"]
- categories: ["工程实践", "算法"]
- ---
+---
+title: "分布式与数据库的爱恨纠葛 之 Raft算法"
+date: 2020-08-20T22:20:24+08:00
+description: ""
+draft: false
+tags: ["分布式", "raft", "一致性", "共识算法"]
+categories: ["工程实践", "算法"]
+---
 
  <!--more-->
-# 分布式与数据库的爱恨纠葛 之 Raft算法
 
+ # 分布式与数据库的爱恨纠葛 之 Raft算法
+
+
+
+演讲人：刘子东
 
 日期：2020月8月18日
 
 [TOC]
 
-
+
 
 ## 背景及说明
+
+
+
+###为什么要学习并分享？
+
+1. 使用广泛，服务治理、分布式协调、分布式存储等等等等等。虽说每个工业实现都略有区别，但是整体思想都是基于原始论文的基础上优化。
+   1. 已经上线的内部项目
+      1. orchestrator高可用项目
+      2. consul服务发现项目
+   2. 相关紧密的项目
+      1. tikv/pd - TiDB
+      2. etcd - Kubernetes
+      3. mongodb（v3.2及以上，raft-like（secondary拉取等））
+2. 提高个人及团队对分布式系统的理解程度，能完成相关项目调试/调优/开发，提高服务质量。
+   1. 帮助进一步理解内部项目
+   2. 帮助理解分布式数据库的一些重要配置及其对业务的影响（如mongodb的读写concern等）
 
 
 
@@ -94,7 +114,7 @@ https://github.com/sylzd/MIT_6.824_2020/tree/master/lab2_raft
 
   - 所有进程（客户端）**看到的**读写操作顺序都保持一致。
 
-    <img src="/Users/lzd/Dropbox/mi_work/proj/test/gogogo/15.distribute_6.824_2020/lab2_raft/raft/image-20200813013242246.png" alt="image-20200813013242246" style="zoom:25%;" />
+    <img src="./raft/image-20200813013242246.png" alt="image-20200813013242246" style="zoom:25%;" />
 
 - 因果一致性（Causal consistency）:  通过提高并行率来提高性能，如MongoDB-3.6（读写Concern都是Majority时），朋友圈评论可见性在跨数据中心同步上的应用
 
@@ -158,7 +178,7 @@ leader, follower, candidate
 
 
 
-**RPC:** 
+**RPC:**
 
 - 节点之间交流的方式
 - 有两个RPC
@@ -171,7 +191,7 @@ leader, follower, candidate
 
    帮助理解大致过程，http://thesecretlivesofdata.com/raft/
 
-   
+
 
    **规则**
 
@@ -184,7 +204,7 @@ leader, follower, candidate
    3. **leader完备性**：一条日志条目在任期内committed，那么这个日志条目一定会出现在后面任期的leader日志中 （1+2+3+选举限制安全机制）
    4. 状态机安全：如果一个节点应用了一条日志条目在状态机中, 所有节点都不能应用和这个日志条目的index相同但不一样的日志 （4+日志和数据不一致安全机制）
 
-   
+
 
 2. Raft设计与实现概览
 
@@ -194,7 +214,7 @@ leader, follower, candidate
 
 - 设计图：（实验中需要实现的点大都在这张图里）
 
-![2E5F875B-90F5-4D4B-A84E-B5F620A43C5B](./2E5F875B-90F5-4D4B-A84E-B5F620A43C5B.png)
+![2E5F875B-90F5-4D4B-A84E-B5F620A43C5B](./raft/img/2E5F875B-90F5-4D4B-A84E-B5F620A43C5B.png)
 
 
 
@@ -225,8 +245,8 @@ leader通过心跳机制与follower保持联系，失联会触发选举。选举
       2. 之前的leader从灾难中恢复收到RPC请求，会发现自己的任期小于当前任期数，主动退化为follower
    2. 拉完一轮票后，如果票数超过半数，则选举成功
    3. 如果一轮term过后，所有节点都没有选举成功(当ElectionTimeout恰好完全相等时可能会发生)，或选举出两个leader, 则重来，触发下一轮term选举
-   
-   
+
+
 
 #### 选举限制安全机制
 
@@ -271,7 +291,7 @@ leader通过心跳机制	与follower保持联系，并在心跳中带上需要Ap
 
 1.  **请求转给raft ：**raft层接收到转发过来的客户端请求，开始执行操作`Start(command)`，并开始日志复制，并立即返回（index, term, isLeader），不用管结果。
 2. **raft完成日志大多数提交**：leader发送`AppendEntries`RPC请求，每次都获取新日志复制结果，直到完成日志**大多数提交**
-3.  **leader应用日志**：更新自己的`commitIndex`，并将`ApplyMsg{command, index}`传给一个`applyCh`, 状态机从`applyCh`中读取消息后，开始执行请求，并返回给客户端 
+3.  **leader应用日志**：更新自己的`commitIndex`，并将`ApplyMsg{command, index}`传给一个`applyCh`, 状态机从`applyCh`中读取消息后，开始执行请求，并返回给客户端
 
 4. **follower应用日志**：follower收到下一个`AppendEntries`请求((为了减少消息来回次数))中的`LeaderCommit`(即leader的`commitIndex`，已提交日志的最大index)时，开始apply日志到自己本地的状态机，直到达到`LeaderCommit`
 
@@ -281,25 +301,25 @@ leader通过心跳机制	与follower保持联系，并在心跳中带上需要Ap
 
 1. 非Leader挂掉：`TestFailAgree2B`3个节点中的1个节点(非leader)挂掉后，剩下2个节点依然能通过`majority`提交日志；而Leader会无限期重试发送`AppendEntries`给挂掉的节点，以确保所有的`follower`都存储了这条`log entry`，即使已经返回给客户端结果了也会重试通过apply补偿，逐步追回。
 
-   
+
 
 2. leader挂掉: 会发生不一致的情况（详细情况如下图）
 
-   <img src="/Users/lzd/Dropbox/mi_work/proj/test/gogogo/15.distribute_6.824_2020/lab2_raft/raft/B5BB98E8-FD48-4C35-BA7E-7FCD1C09EEF3.png" alt="B5BB98E8-FD48-4C35-BA7E-7FCD1C09EEF3" style="zoom: 50%;" />
-   
+   <img src="./raft/img/B5BB98E8-FD48-4C35-BA7E-7FCD1C09EEF3.png" alt="B5BB98E8-FD48-4C35-BA7E-7FCD1C09EEF3" style="zoom: 50%;" />
+
    a. follower的日志仅仅比leader少1个条目, 比较正常的情况
-   
+
    b. follower的日志比leader少了多个条目，这种情况follower有些延迟
-   
+
    c. follwer的日志比leader多，但还在一个任期
-   
+
    d. follwer的日志比leader多, 且任期比leader还大
-   
+
    e. follwer的日志跟leader的历史日志不一样
-   
+
    f.  follwer的日志跟leader的历史日志不一样，且follower日志index还要大
 
-   
+
 
 3. 通过以下一致性检查步骤能恢复一致性（应对上述a-f所有情况），主要思路就是**leader会强制覆写follower的日志**（由于leader的日志一定是大多数的，所以可以放心覆写
 
@@ -307,9 +327,9 @@ leader通过心跳机制	与follower保持联系，并在心跳中带上需要Ap
      - 检查项1：leader的 (prevLogTerm, prevLogIndex）（新日志前一条日志）与follower不匹配，则说明不一致
      - 检查项2：follower中的历史日志有与leader不匹配的，则删除该不匹配日志及之后所有日志
      - 检查项3：follower中的日志缺失太多，比prevLogIndex要小
-     
+
    - 一致性修复：对应`nextIndex`回退一格（leader的nextIndex[followerID]-1），下一次leader会多发送一条历史日志，用来覆写follower的不合群或不存在的日志，通过迭代回退，最终所有日志会趋于一致。
-   
+
   - a修复：正常，直接复制新条目即可
      - b修复：follower直接告诉Leader从我的最后一个日志后面一个索引发AE或一次次回退到正确位点,来补全日志（检查项3）
      - c修复：follower多出来的这个由于没有提交，等Leader再来一条日志后，Term一定大于6（图中是8）（检查项2，出现在网络分区时假Leader有新未提交日志，后来回退为follower时，但后面Leader的term一定会比这个大，所以会覆写掉）
@@ -331,7 +351,7 @@ leader通过心跳机制	与follower保持联系，并在心跳中带上需要Ap
   		reply.NextIndex = args.PrevLogIndex
   		return
   	}
-  
+
   	// 2. 一致性检查(leader crash 会出现)：follower历史日志与新的append日志冲突，则删掉冲突日志及之后的所有日志，且leader[followerID].NextIndex回退到剩余日志的末尾
   	// If an existing entry conflicts with a new one (same index but different terms), delete the existing entry and all that follow it (§5.3)
   	for _, entry := range args.Entries {
@@ -342,7 +362,7 @@ leader通过心跳机制	与follower保持联系，并在心跳中带上需要Ap
   			return
   		}
   	}
-  
+
   	// 3. 一致性检查(leader crash 会出现)：follower日志缺失太多,则leader[followerID].NextIndex回退到日志的末尾
   	// Append any new entries not already in the log
   	if args.PrevLogIndex > len(rf.logEntries)-1 {
@@ -440,10 +460,10 @@ func (rf *Raft) persist() {
 
 1. 选举安全：每个任期最多一个leader
 
-2. leader只能添加日志：只有leader能且仅能添加日志，而不能删除或更新日志条目 
+2. leader只能添加日志：只有leader能且仅能添加日志，而不能删除或更新日志条目
 3. 日志匹配原则：集群中如果两个日志的term和index一样，那么他们自己和之前的所有日志条目也全部相同
-4. leader完备性：一条日志条目在任期内committed，那么这个日志条目一定会出现在后面任期的leader日志中 
-5. 状态机安全：如果一个节点应用了一条日志条目在状态机中, 所有节点都不能应用和这个日志条目的index相同但不一样的日志 
+4. leader完备性：一条日志条目在任期内committed，那么这个日志条目一定会出现在后面任期的leader日志中
+5. 状态机安全：如果一个节点应用了一条日志条目在状态机中, 所有节点都不能应用和这个日志条目的index相同但不一样的日志
 
 
 
@@ -478,9 +498,9 @@ func (rf *Raft) persist() {
   2. 已知2（日志安全机制）一开始空的日志状态肯定是满足日志匹配特性的，然后一致性检查（见日志复制安全机制）保护了日志匹配特性当日志扩展的时候。因此，每当附加日志 RPC 返回成功时，领导人就知道跟随者的日志一定是和自己相同的了
   3. 结论：如果在两个日志中的条目拥有相同的索引和任期号，那么他们自己和之前的所有日志条目也全部相同，即满足日志匹配特性
 
-  
 
-  
+
+
 
 - 规则4 - leader完备性(或者叫commit安全性，一条日志条目在任期内committed，那么这个日志条目一定会出现在后面任期的leader日志中)：
 
@@ -569,24 +589,24 @@ func (rf *Raft) persist() {
 
     从3个节点切成5个节点，由于每个节点切换成员配置或加入集群的时间不一样，导致在图中的方框时间切面，出现了分裂，S1、S2形成一个集群，S3、S4、S5形成一个集群。此时如果S2挂掉，那么S1会选自己当leader，S3、S4、S5也会选一个leader如S5；那么这个term就会产生两个leader
 
-  <img src="/Users/lzd/Dropbox/mi_work/proj/test/gogogo/15.distribute_6.824_2020/lab2_raft/raft/4427265A-0536-411A-BFA8-D90E7B82CC0B.png" alt="4427265A-0536-411A-BFA8-D90E7B82CC0B" style="zoom: 50%;" />
+  <img src="./raft/img/4427265A-0536-411A-BFA8-D90E7B82CC0B.png" alt="4427265A-0536-411A-BFA8-D90E7B82CC0B" style="zoom: 50%;" />
 
   - 联合共识的两阶段配置更改法
-    
+
     <img src="./raft/img/1D36DD6D-C420-4BD4-B335-E2897F516787.png" alt="1D36DD6D-C420-4BD4-B335-E2897F516787" style="zoom:50%;" />
-    
+
     保证选举和commit日志安全的同时，响应客户端请求，具体证明过程略。
-    
+
     - **阶段1 - 切换到过渡配置(结合旧新配置)，达到`联合共识`状态**
-    
+
       -  **`联合共识`规定：**
-    
-        1. 日志条目被发送到新旧配置所有节点 
-    
+
+        1. 日志条目被发送到新旧配置所有节点
+
         2. 新旧配置的节点都可以成为leader
-    
+
         3. **成为leader和日志条目的commit需要新配置的大多数同意+旧配置的大多数同意**（避免两个大多数原则的分歧）
-    
+
     - **阶段2 - 将过度配置切换到新配置**
 
 - 单节点变更（single-server changes）：一个一个加进去集群，由于每次成员变更都有一个节点作为新旧配置的重叠，而这个节点只会投一边，所以只会有一个leader。Raft的作者在2014年提出的一种简单一点的优化方法，https://web.stanford.edu/~ouster/cgi-bin/papers/OngaroPhD.pdf
@@ -635,7 +655,7 @@ func (rf *Raft) persist() {
 
 - 流水线化，也是增大可并行化工作的一种方式
 
-  
+
 
 
 
@@ -677,14 +697,14 @@ Raft算法只是分布式系统中，多个节点完成数据同步，并满足�
 
 - gossip
 
-  
-  
-  
+
+
+
 
 
 ## 参考资料
 
-Raft论文原文：https://pdos.csail.mit.edu/6.824/papers/raft-extended.pdf 
+Raft论文原文：https://pdos.csail.mit.edu/6.824/papers/raft-extended.pdf
 
 MonoDB一致性文档：https://docs.mongodb.com/manual/core/causal-consistency-read-write-concerns/
 
