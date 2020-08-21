@@ -13,7 +13,7 @@ categories: ["工程实践", "算法"]
 
 
 
-演讲人：刘子东
+分享人：刘子东
 
 日期：2020月8月18日
 
@@ -28,13 +28,12 @@ categories: ["工程实践", "算法"]
 ###为什么要学习并分享？
 
 1. 使用广泛，服务治理、分布式协调、分布式存储等等等等等。虽说每个工业实现都略有区别，但是整体思想都是基于原始论文的基础上优化。
-   1. 已经上线的内部项目
-      1. orchestrator高可用项目
-      2. consul服务发现项目
-   2. 相关紧密的项目
-      1. tikv/pd - TiDB
-      2. etcd - Kubernetes
-      3. mongodb（v3.2及以上，raft-like（secondary拉取等））
+   1. 相关紧密的项目
+      1. orchestrator
+      2. consul
+      3. tikv/pd - TiDB
+      4. etcd - Kubernetes
+      5. mongodb（v3.2及以上，raft-like（secondary拉取等））
 2. 提高个人及团队对分布式系统的理解程度，能完成相关项目调试/调优/开发，提高服务质量。
    1. 帮助进一步理解内部项目
    2. 帮助理解分布式数据库的一些重要配置及其对业务的影响（如mongodb的读写concern等）
