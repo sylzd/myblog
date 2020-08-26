@@ -1,10 +1,10 @@
 ---
-title: "分布式与数据库的爱恨纠葛 之 Raft算法"
+title: "分布式与数据库的爱恨纠葛 之 Raft算法 (长文慎入)"
 date: 2020-08-20T22:20:24+08:00
 description: ""
 draft: false
 tags: ["分布式", "raft", "一致性", "共识算法"]
-categories: ["工程实践", "算法"]
+categories: ["算法", "分布式"]
 ---
 
  <!--more-->
